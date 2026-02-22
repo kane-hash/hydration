@@ -1,24 +1,68 @@
-# Hello World in C++
+# 💧 Hydration Physics Simulation
 
-A classic, minimal "Hello World" program written in C++. This project is perfect for verifying that your C++ development environment and compiler are set up correctly.
+A real-time fluid physics simulation built with **C++** and **OpenGL**, using **Smoothed Particle Hydrodynamics (SPH)** to simulate realistic water behavior. ~2000 particles flow, splash, and interact with your cursor in real time.
+
+![Hydration Physics Screenshot](assets/screenshot.png)
 
 ## 🚀 Getting Started
 
-These instructions will help you compile and run the project on your local machine.
+### Clone the Repository
+
+```bash
+git clone git@github.com:kane-hash/hydration.git
+cd hydration
+```
 
 ### Prerequisites
 
-You will need a C++ compiler installed on your system. A common choice is `g++` (part of the GCC toolchain) or `clang`. 
+- **macOS** with Xcode Command Line Tools
+- **Homebrew** package manager
 
-* **Windows:** You can install MinGW or use Visual Studio.
-* **macOS:** Install Xcode Command Line Tools by running `xcode-select --install` in your terminal.
-* **Linux:** Install `build-essential` (Ubuntu/Debian) or the equivalent package group for your distribution.
-
-### 🛠️ Compilation
-
-1. Open your terminal or command prompt.
-2. Navigate to the directory where you saved your `.cpp` file (e.g., `main.cpp`).
-3. Run the following command to compile the code:
+Install dependencies:
 
 ```bash
-g++ main.cpp -o hello_world
+brew install glfw glm
+```
+
+### Build & Run
+
+```bash
+make
+./hydration
+```
+
+## 🎮 Controls
+
+| Key             | Action                   |
+| --------------- | ------------------------ |
+| **Mouse hover** | Repels particles         |
+| **Space**       | Reset simulation         |
+| **G**           | Toggle gravity direction |
+| **Escape**      | Quit                     |
+
+## 🧪 How It Works
+
+The simulation uses **SPH (Smoothed Particle Hydrodynamics)** with:
+
+- **Poly6 kernel** for density estimation
+- **Spiky kernel** for pressure forces
+- **Viscosity kernel** for fluid damping
+- **Spatial hashing** for efficient neighbor search
+- **Sub-stepping** (4 steps/frame) for stability
+
+## 📁 Project Structure
+
+```
+hydration/
+├── main.cpp              # Entry point, window, input handling
+├── Makefile              # Build configuration
+├── shaders/
+│   ├── particle.vert     # Vertex shader
+│   └── particle.frag     # Fragment shader (blue→cyan coloring)
+├── src/
+│   ├── Simulation.h/cpp  # SPH fluid engine
+│   ├── Renderer.h/cpp    # OpenGL particle renderer
+│   └── Shader.h/cpp      # Shader loading utilities
+└── assets/
+    └── screenshot.png    # Preview image
+```
