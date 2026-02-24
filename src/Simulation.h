@@ -16,13 +16,14 @@ struct Particle {
 class Simulation {
 public:
     Simulation(int numParticles = 2000);
-    
+
     void update(float dt);
     void reset();
     void addForce(float x, float y, float radius, float strength);
     void applyCursorForce(float x, float y, bool attract);
     void toggleGravity();
-    
+    void setGravityDirection(float x, float y);
+
     static constexpr float CURSOR_RADIUS = 0.18f;
     
     const std::vector<Particle>& getParticles() const { return particles; }
@@ -40,9 +41,15 @@ private:
     float restDensity = 1000.0f;          // ρ₀
     float gasConstant = 2000.0f;          // k
     float viscosity = 250.0f;             // μ
-    float gravity = -9.81f;               // g (sign indicates direction)
-    float boundaryDamping = -0.5f;
+    glm::vec2 gravity = glm::vec2(0.0f, -1.5f);  // g (scaled for [0,1] domain)
     float particleMass = 1.0f;
+
+    // XSPH velocity smoothing
+    float xsphEpsilon = 0.05f;
+
+    // Boundary penalty forces
+    float boundaryStiffness = 10000.0f;
+    float boundaryDamp = 256.0f;
     
     // Kernel precomputed constants
     float poly6Coeff;
@@ -69,6 +76,7 @@ private:
     CellKey getCellKey(const glm::vec2& pos) const;
     void computeDensityPressure();
     void computeForces();
+    void computeXSPHCorrection();
     void integrate(float dt);
     void enforceBoundary();
 };

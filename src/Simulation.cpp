@@ -154,7 +154,48 @@ void Simulation::computeForces() {
         }
         
         // Gravity
-        particles[i].force += glm::vec2(0.0f, gravity) * particles[i].density;
+        particles[i].force += gravity * particles[i].density;
+    }
+}
+
+void Simulation::computeXSPHCorrection() {
+    float h = smoothingRadius;
+    float h2 = h * h;
+
+    // Accumulate velocity corrections
+    std::vector<glm::vec2> corrections(particles.size(), glm::vec2(0.0f));
+
+    for (int i = 0; i < static_cast<int>(particles.size()); i++) {
+        CellKey myCell = getCellKey(particles[i].position);
+
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                CellKey neighborCell = {myCell.x + dx, myCell.y + dy};
+                auto it = grid.find(neighborCell);
+                if (it == grid.end()) continue;
+
+                for (int j : it->second) {
+                    if (i == j) continue;
+
+                    glm::vec2 diff = particles[i].position - particles[j].position;
+                    float r2 = glm::dot(diff, diff);
+
+                    if (r2 < h2 && r2 > 1e-12f) {
+                        // Poly6 kernel for XSPH
+                        float w = poly6Coeff * std::pow(h2 - r2, 3.0f);
+                        float weight = w * particleMass / particles[j].density;
+
+                        // Accumulate velocity difference
+                        corrections[i] += (particles[j].velocity - particles[i].velocity) * weight;
+                    }
+                }
+            }
+        }
+    }
+
+    // Apply corrected velocities
+    for (int i = 0; i < static_cast<int>(particles.size()); i++) {
+        particles[i].velocity += xsphEpsilon * corrections[i];
     }
 }
 
@@ -174,29 +215,44 @@ void Simulation::integrate(float dt) {
 }
 
 void Simulation::enforceBoundary() {
-    float margin = 0.005f;
-    
+    float margin = 0.02f;  // Boundary layer thickness
+
     for (auto& p : particles) {
-        // Bottom
+        // Penalty forces for each boundary
+        glm::vec2 penaltyForce(0.0f);
+
+        // Bottom boundary
         if (p.position.y < DOMAIN_MIN + margin) {
-            p.position.y = DOMAIN_MIN + margin;
-            p.velocity.y *= boundaryDamping;
+            float d = DOMAIN_MIN + margin - p.position.y;
+            penaltyForce.y += boundaryStiffness * d;
+            penaltyForce.y -= boundaryDamp * p.velocity.y;
         }
-        // Top
+        // Top boundary
         if (p.position.y > DOMAIN_MAX - margin) {
-            p.position.y = DOMAIN_MAX - margin;
-            p.velocity.y *= boundaryDamping;
+            float d = p.position.y - (DOMAIN_MAX - margin);
+            penaltyForce.y -= boundaryStiffness * d;
+            penaltyForce.y -= boundaryDamp * p.velocity.y;
         }
-        // Left
+        // Left boundary
         if (p.position.x < DOMAIN_MIN + margin) {
-            p.position.x = DOMAIN_MIN + margin;
-            p.velocity.x *= boundaryDamping;
+            float d = DOMAIN_MIN + margin - p.position.x;
+            penaltyForce.x += boundaryStiffness * d;
+            penaltyForce.x -= boundaryDamp * p.velocity.x;
         }
-        // Right
+        // Right boundary
         if (p.position.x > DOMAIN_MAX - margin) {
-            p.position.x = DOMAIN_MAX - margin;
-            p.velocity.x *= boundaryDamping;
+            float d = p.position.x - (DOMAIN_MAX - margin);
+            penaltyForce.x -= boundaryStiffness * d;
+            penaltyForce.x -= boundaryDamp * p.velocity.x;
         }
+
+        // Apply penalty force as acceleration
+        p.velocity += penaltyForce / p.density * 0.016f;  // Scale for stability
+
+        // Hard clamp as fallback for extreme cases
+        p.position = glm::clamp(p.position,
+            glm::vec2(DOMAIN_MIN + 0.001f),
+            glm::vec2(DOMAIN_MAX - 0.001f));
     }
 }
 
@@ -204,11 +260,12 @@ void Simulation::update(float dt) {
     // Sub-step for stability
     int substeps = 4;
     float subDt = dt / static_cast<float>(substeps);
-    
+
     for (int s = 0; s < substeps; s++) {
         buildGrid();
         computeDensityPressure();
         computeForces();
+        computeXSPHCorrection();
         integrate(subDt);
         enforceBoundary();
     }
@@ -251,5 +308,9 @@ void Simulation::applyCursorForce(float x, float y, bool attract) {
 }
 
 void Simulation::toggleGravity() {
-    gravity = -gravity;
+    gravity.y = -gravity.y;
+}
+
+void Simulation::setGravityDirection(float x, float y) {
+    gravity = glm::vec2(x, y);
 }

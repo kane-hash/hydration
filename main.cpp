@@ -12,7 +12,7 @@ static int g_winW = 1200, g_winH = 800;
 
 void keyCallback(GLFWwindow* window, int key, int /*scancode*/, int action, int /*mods*/) {
     if (action != GLFW_PRESS) return;
-    
+
     switch (key) {
         case GLFW_KEY_ESCAPE:
             glfwSetWindowShouldClose(window, true);
@@ -24,6 +24,22 @@ void keyCallback(GLFWwindow* window, int key, int /*scancode*/, int action, int 
         case GLFW_KEY_G:
             if (g_sim) g_sim->toggleGravity();
             std::cout << "[Hydration] Gravity toggled" << std::endl;
+            break;
+        case GLFW_KEY_UP:
+            if (g_sim) g_sim->setGravityDirection(0.0f, 9.81f);
+            std::cout << "[Hydration] Gravity: UP" << std::endl;
+            break;
+        case GLFW_KEY_DOWN:
+            if (g_sim) g_sim->setGravityDirection(0.0f, -9.81f);
+            std::cout << "[Hydration] Gravity: DOWN" << std::endl;
+            break;
+        case GLFW_KEY_LEFT:
+            if (g_sim) g_sim->setGravityDirection(-9.81f, 0.0f);
+            std::cout << "[Hydration] Gravity: LEFT" << std::endl;
+            break;
+        case GLFW_KEY_RIGHT:
+            if (g_sim) g_sim->setGravityDirection(9.81f, 0.0f);
+            std::cout << "[Hydration] Gravity: RIGHT" << std::endl;
             break;
     }
 }
@@ -120,7 +136,8 @@ int main() {
     std::cout << "Controls:" << std::endl;
     std::cout << "  Mouse click/drag - Push particles" << std::endl;
     std::cout << "  Space            - Reset simulation" << std::endl;
-    std::cout << "  G                - Toggle gravity" << std::endl;
+    std::cout << "  G                - Toggle gravity (flip)" << std::endl;
+    std::cout << "  Arrow keys       - Change gravity direction" << std::endl;
     std::cout << "  Escape           - Quit" << std::endl;
     std::cout << "====================================" << std::endl;
     
